@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="it">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Apri Portone</title>
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                background: #0f0f0f;
+                color: #fff;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 2rem;
+            }
+
+            .card {
+                background: #1a1a1a;
+                border: 1px solid #2a2a2a;
+                border-radius: 20px;
+                padding: 2.5rem 2rem;
+                width: 100%;
+                max-width: 360px;
+                text-align: center;
+            }
+
+            .icon {
+                width: 72px;
+                height: 72px;
+                background: #222;
+                border: 1px solid #333;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 1.5rem;
+                font-size: 32px;
+            }
+
+            h1 {
+                font-size: 22px;
+                font-weight: 600;
+                margin-bottom: 0.4rem;
+            }
+
+            .subtitle {
+                font-size: 14px;
+                color: #888;
+                margin-bottom: 2rem;
+                line-height: 1.5;
+            }
+
+            .pin-display {
+                display: flex;
+                justify-content: center;
+                gap: 10px;
+                margin-bottom: 1.5rem;
+            }
+
+            .pin-dot {
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                background: #333;
+                border: 1px solid #444;
+                transition: background 0.15s;
+            }
+
+            .pin-dot.filled {
+                background: #fff;
+                border-color: #fff;
+            }
+
+            .keypad {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+                margin-bottom: 1rem;
+            }
+
+            .key {
+                background: #222;
+                border: 1px solid #2e2e2e;
+                border-radius: 12px;
+                height: 60px;
+                font-size: 20px;
+                font-weight: 500;
+                color: #fff;
+                cursor: pointer;
+                transition:
+                    background 0.1s,
+                    transform 0.1s;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                user-select: none;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            .key:active {
+                background: #333;
+                transform: scale(0.95);
+            }
+            .key.delete {
+                font-size: 16px;
+                color: #888;
+            }
+            .key.empty {
+                background: transparent;
+                border-color: transparent;
+                cursor: default;
+            }
+
+            .btn-open {
+                width: 100%;
+                height: 56px;
+                border-radius: 14px;
+                border: none;
+                background: #fff;
+                color: #000;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    opacity 0.2s,
+                    transform 0.1s;
+                margin-top: 0.5rem;
+            }
+
+            .btn-open:disabled {
+                opacity: 0.3;
+                cursor: not-allowed;
+            }
+            .btn-open:not(:disabled):active {
+                transform: scale(0.98);
+            }
+
+            .status {
+                margin-top: 1rem;
+                font-size: 14px;
+                min-height: 20px;
+                color: #888;
+            }
+
+            .status.success {
+                color: #4ade80;
+            }
+            .status.error {
+                color: #f87171;
+            }
+
+            .spinner {
+                display: inline-block;
+                width: 16px;
+                height: 16px;
+                border: 2px solid #444;
+                border-top-color: #fff;
+                border-radius: 50%;
+                animation: spin 0.7s linear infinite;
+                vertical-align: middle;
+                margin-right: 6px;
+            }
+
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="icon">🏠</div>
+            <h1>Benvenuto</h1>
+            <p class="subtitle">Inserisci il codice per aprire il portone</p>
+
+            <div class="pin-display" id="pinDisplay">
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+                <div class="pin-dot"></div>
+            </div>
+
+            <div class="keypad">
+                <button class="key" onclick="pressKey('1')">1</button>
+                <button class="key" onclick="pressKey('2')">2</button>
+                <button class="key" onclick="pressKey('3')">3</button>
+                <button class="key" onclick="pressKey('4')">4</button>
+                <button class="key" onclick="pressKey('5')">5</button>
+                <button class="key" onclick="pressKey('6')">6</button>
+                <button class="key" onclick="pressKey('7')">7</button>
+                <button class="key" onclick="pressKey('8')">8</button>
+                <button class="key" onclick="pressKey('9')">9</button>
+                <button class="key empty"></button>
+                <button class="key" onclick="pressKey('0')">0</button>
+                <button class="key delete" onclick="deleteKey()">⌫</button>
+            </div>
+
+            <button class="btn-open" id="btnOpen" disabled onclick="openDoor()">
+                Apri portone
+            </button>
+            <div class="status" id="status"></div>
+        </div>
+
+        <script>
+            const CORRECT_PIN = "241017";
+            const NUKI_TOKEN =
+                "9bdbb9a55a37b3bef368c95817ffa568da83c3b68372bf40d1dc4f9e67c0f8ae3f6210d443fd04cb";
+            const SMARTLOCK_ID = "9753894154";
+            const PIN_LENGTH = 6;
+
+            let currentPin = "";
+
+            function pressKey(digit) {
+                if (currentPin.length >= PIN_LENGTH) return;
+                currentPin += digit;
+                updateDisplay();
+                if (currentPin.length === PIN_LENGTH) {
+                    document.getElementById("btnOpen").disabled = false;
+                }
+            }
+
+            function deleteKey() {
+                currentPin = currentPin.slice(0, -1);
+                document.getElementById("btnOpen").disabled = true;
+                updateDisplay();
+            }
+
+            function updateDisplay() {
+                const dots = document.querySelectorAll(".pin-dot");
+                dots.forEach((d, i) => {
+                    d.classList.toggle("filled", i < currentPin.length);
+                });
+            }
+
+            async function openDoor() {
+                if (currentPin !== CORRECT_PIN) {
+                    setStatus("Codice non corretto", "error");
+                    shake();
+                    currentPin = "";
+                    updateDisplay();
+                    document.getElementById("btnOpen").disabled = true;
+                    return;
+                }
+
+                const btn = document.getElementById("btnOpen");
+                btn.disabled = true;
+                setStatus(
+                    '<span class="spinner"></span> Apertura in corso…',
+                    "",
+                );
+
+                try {
+                    const res = await fetch(
+                        `https://api.nuki.io/smartlock/${SMARTLOCK_ID}/action/unlock`,
+                        {
+                            method: "POST",
+                            headers: {
+                                Authorization: `Bearer ${NUKI_TOKEN}`,
+                                "Content-Type": "application/json",
+                            },
+                        },
+                    );
+
+                    if (res.ok) {
+                        setStatus("✓ Portone aperto!", "success");
+                        currentPin = "";
+                        updateDisplay();
+                        setTimeout(() => {
+                            setStatus("", "");
+                            btn.disabled = true;
+                        }, 4000);
+                    } else {
+                        setStatus("Errore API (" + res.status + ")", "error");
+                        btn.disabled = false;
+                    }
+                } catch (e) {
+                    setStatus("Errore di rete", "error");
+                    btn.disabled = false;
+                }
+            }
+
+            function setStatus(msg, type) {
+                const el = document.getElementById("status");
+                el.innerHTML = msg;
+                el.className = "status " + type;
+            }
+
+            function shake() {
+                const card = document.querySelector(".card");
+                card.style.transition = "transform 0.07s";
+                const moves = ["-8px", "8px", "-6px", "6px", "0px"];
+                let i = 0;
+                const interval = setInterval(() => {
+                    card.style.transform = `translateX(${moves[i]})`;
+                    i++;
+                    if (i >= moves.length) {
+                        clearInterval(interval);
+                        card.style.transform = "";
+                    }
+                }, 70);
+            }
+        </script>
+    </body>
+</html>
