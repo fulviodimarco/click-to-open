@@ -214,10 +214,8 @@
         </div>
 
         <script>
-            const CORRECT_PIN = "241017";
-            const NUKI_TOKEN =
-                "9bdbb9a55a37b3bef368c95817ffa568da83c3b68372bf40d1dc4f9e67c0f8ae3f6210d443fd04cb";
-            const SMARTLOCK_ID = "9753894154";
+            const WORKER_URL =
+                "https://click-to-open.fulvio-dimarco.workers.dev/";
             const PIN_LENGTH = 6;
 
             let currentPin = "";
@@ -245,15 +243,6 @@
             }
 
             async function openDoor() {
-                if (currentPin !== CORRECT_PIN) {
-                    setStatus("Codice non corretto", "error");
-                    shake();
-                    currentPin = "";
-                    updateDisplay();
-                    document.getElementById("btnOpen").disabled = true;
-                    return;
-                }
-
                 const btn = document.getElementById("btnOpen");
                 btn.disabled = true;
                 setStatus(
@@ -262,16 +251,13 @@
                 );
 
                 try {
-                    const res = await fetch(
-                        `https://api.nuki.io/smartlock/${SMARTLOCK_ID}/action/unlock`,
-                        {
-                            method: "POST",
-                            headers: {
-                                Authorization: `Bearer ${NUKI_TOKEN}`,
-                                "Content-Type": "application/json",
-                            },
-                        },
-                    );
+                    const res = await fetch(WORKER_URL, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ pin: currentPin }),
+                    });
+
+                    const data = await res.json();
 
                     if (res.ok) {
                         setStatus("✓ Portone aperto!", "success");
@@ -281,8 +267,14 @@
                             setStatus("", "");
                             btn.disabled = true;
                         }, 4000);
+                    } else if (res.status === 401) {
+                        setStatus("Codice non corretto", "error");
+                        shake();
+                        currentPin = "";
+                        updateDisplay();
+                        btn.disabled = true;
                     } else {
-                        setStatus("Errore API (" + res.status + ")", "error");
+                        setStatus("Errore (" + res.status + ")", "error");
                         btn.disabled = false;
                     }
                 } catch (e) {
